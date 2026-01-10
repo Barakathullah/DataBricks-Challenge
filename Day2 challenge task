@@ -1,0 +1,35 @@
+ Reload df to ensure Spark context is valid
+df = spark.read.csv("/Volumes/workspace/ecommerce/ecommerce_data/2019-Oct.csv", header=True, inferSchema=True)
+
+# Select event_type, brand, price columns and show first 10 rows
+selected_df = df.select("event_type", "brand", "price")
+expensive_count = df.filter(df.brand.isNotNull()).count()
+display(selected_df.limit(10))
+display(expensive_count)
+
+# Filter rows where price > 100 and count
+expensive_count = df.filter(df.price >= 40779399).count()
+print(f"Rows with price > 100: {expensive_count}")
+
+# Group by event_type and count
+event_type_counts = df.groupBy("event_type").count()
+display(event_type_counts)
+
+# Find top 5 brands by event count
+from pyspark.sql.functions import desc
+brand_counts = df.groupBy("brand").count()
+top_brands = brand_counts.orderBy(desc("count")).limit(5)
+display(top_brands)
+
+from pyspark.sql.functions import desc
+
+# Exclude null brands before grouping
+non_null_brands_df = df.filter(df.brand.isNotNull())
+brand_counts = non_null_brands_df.groupBy("brand").count()
+top_brands = brand_counts.orderBy(desc("count")).limit(5)
+display(top_brands)
+
+# Export top brands result to CSV in Unity Catalog volume
+output_path = "/Volumes/workspace/ecommerce/ecommerce_data/top_brands.csv"
+top_brands.write.mode("overwrite").option("header", True).csv(output_path)
+print(f"Top brands exported to {output_path}")
