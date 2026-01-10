@@ -1,0 +1,156 @@
+# Databricks notebook source
+pip install kaggle
+
+# COMMAND ----------
+
+import os
+
+os.environ["KAGGLE_USERNAME"] = "barakathullahr"
+os.environ["KAGGLE_KEY"] = "KGAT_177a147ae31fc7ef1790157bd7b44d24"
+
+print("Kaggle credentials configured!")
+
+# COMMAND ----------
+
+spark.sql("""
+CREATE SCHEMA IF NOT EXISTS workspace.ecommerce
+""")
+
+# COMMAND ----------
+
+spark.sql("""
+CREATE VOLUME IF NOT EXISTS workspace.ecommerce.ecommerce_data
+""")
+
+# COMMAND ----------
+
+cd /Volumes/workspace/ecommerce/ecommerce_data
+
+# COMMAND ----------
+
+# MAGIC %sh
+# MAGIC kaggle datasets download -d mkechinov/ecommerce-behavior-data-from-multi-category-store
+
+# COMMAND ----------
+
+cd /Volumes/workspace/ecommerce/ecommerce_data
+
+
+# COMMAND ----------
+
+!unzip -o ecommerce-behavior-data-from-multi-category-store.zip
+
+
+# COMMAND ----------
+
+# MAGIC
+# MAGIC %sh rm -f ecommerce-behavior-data-from-multi-category-store.zip*
+# MAGIC ls -lh
+
+# COMMAND ----------
+
+# MAGIC %restart_python
+
+# COMMAND ----------
+
+### 10. Load October 2019 Data
+
+
+df = spark.read.csv("/Volumes/workspace/ecommerce/ecommerce_data/2019-Oct.csv")
+
+# COMMAND ----------
+
+
+df = spark.read.csv("/Volumes/workspace/ecommerce/ecommerce_data/2019-Oct.csv")
+
+
+# COMMAND ----------
+
+print(f"October 2019 - Total Events: {df.count():,}")
+print("\n" + "="*60)
+print("SCHEMA:")
+print("="*60)
+df.printSchema()
+
+# COMMAND ----------
+
+print("\n" + "="*60)
+print("SAMPLE DATA (First 5 rows):")
+print("="*60)
+df.show(5, truncate=False)
+
+# COMMAND ----------
+
+# Explicitly define schema
+from pyspark.sql.types import StructType, StructField, TimestampType, StringType, LongType, DoubleType
+
+schema = StructType([
+    StructField("event_time", TimestampType(), True),
+    StructField("event_type", StringType(), True),
+    StructField("product_id", LongType(), True),
+    StructField("category_id", LongType(), True),
+    StructField("category_code", StringType(), True),
+    StructField("brand", StringType(), True),
+    StructField("price", DoubleType(), True),
+    StructField("user_id", LongType(), True),
+    StructField("user_session", StringType(), True)
+])
+
+events = spark.read.csv("/FileStore/ecommerce_data/2019-Oct.csv",
+                        header=True, schema=schema)
+
+# COMMAND ----------
+
+print("\n" + "="*60)
+print("SAMPLE DATA (First 5 rows):")
+print("="*60)
+df.show(5, truncate=False)
+
+# COMMAND ----------
+
+df = spark.read.csv("/Volumes/workspace/ecommerce/ecommerce_data/2019-Oct.csv")
+display(spark.createDataFrame([(df.count(),)], ["event_count"]))
+display(df.limit(5))
+
+# COMMAND ----------
+
+df = spark.read.csv("/Volumes/workspace/ecommerce/ecommerce_data/2019-Oct.csv", header=True, inferSchema=True)
+
+# Show schema
+df.printSchema()
+
+# Show first 5 rows
+display(df.limit(5))
+
+# Count total rows
+display(spark.createDataFrame([(df.count(),)], ["event_count"]))
+
+# Show distinct event types
+display(df.select("event_type").distinct())
+
+# Group by event_type and count
+display(df.groupBy("event_type").count())
+
+# Show summary statistics for price column
+display(df.select("price").summary())
+
+# Show number of distinct users
+display(spark.createDataFrame([(df.select("user_id").distinct().count(),)], ["distinct_user_count"]))
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
+display(df)
+
+# COMMAND ----------
+
+# Create simple DataFrame
+data = [("iPhone", 999), ("Samsung", 799), ("MacBook", 1299)]
+df = spark.createDataFrame(data, ["product", "price"])
+df.show()
+
+# Filter expensive products
+df.filter(df.price > 1000).show()
