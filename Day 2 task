@@ -1,0 +1,73 @@
+# Load the October 2019 e-commerce dataset
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.getOrCreate()
+df = spark.read.csv("/Volumes/workspace/ecommerce/ecommerce_data/2019-Oct.csv", header=True, inferSchema=True)
+display(df.limit(5))
+df.printSchema()
+
+
+
+  from pyspark.sql import Row
+
+# Synthetic product info DataFrame
+product_info = [
+    Row(product_id=44600062, product_name="Shiseido Cream"),
+    Row(product_id=3900821, product_name="Aqua Heater"),
+    Row(product_id=17200506, product_name="Sofa"),
+    Row(product_id=1307067, product_name="Lenovo Notebook"),
+    Row(product_id=1004237, product_name="Apple Smartphone")
+]
+product_df = spark.createDataFrame(product_info)
+
+# Inner join: only matching product_id
+inner_join_df = df.join(product_df, on="product_id", how="inner")
+display(inner_join_df.limit(5))
+
+# Left join: all events, product info if available
+left_join_df = df.join(product_df, on="product_id", how="left")
+display(left_join_df.limit(5))
+
+# Outer join: all events and all products
+outer_join_df = df.join(product_df, on="product_id", how="outer")
+display(outer_join_df.limit(5))
+
+
+
+  from pyspark.sql.window import Window
+from pyspark.sql.functions import sum as spark_sum
+
+# Define window partitioned by brand, ordered by event_time
+brand_window = Window.partitionBy("brand").orderBy("event_time").rowsBetween(Window.unboundedPreceding, Window.currentRow)
+
+# Calculate running total sales per brand
+running_total_df = df.withColumn("running_total_sales", spark_sum("price").over(brand_window))
+
+# Show sample results for a few brands
+sample_brands = ["apple", "lenovo", "shiseido"]
+display(running_total_df.filter(running_total_df.brand.isin(sample_brands)).select("event_time", "brand", "price", "running_total_sales").orderBy("brand", "event_time").limit(20))
+
+
+
+
+
+  from pyspark.sql.functions import when, col, hour
+
+# Price category: low (<100), medium (100-500), high (>500)
+df_with_price_cat = df.withColumn(
+    "price_category",
+    when(col("price") < 100, "low")
+    .when((col("price") >= 100) & (col("price") <= 500), "medium")
+    .otherwise("high")
+)
+
+# Event hour: extract hour from event_time
+df_with_event_hour = df_with_price_cat.withColumn("event_hour", hour(col("event_time")))
+
+# User activity flag: 1 if user_id is not null, else 0
+df_with_features = df_with_event_hour.withColumn(
+    "user_active",
+    when(col("user_id").isNotNull(), 1).otherwise(0)
+)
+
+# Show sample results
+display(df_with_features.select("event_type", "brand", "price", "price_category", "event_hour", "user_active").limit(20))
