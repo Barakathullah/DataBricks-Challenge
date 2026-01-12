@@ -1,0 +1,68 @@
+#Task 1: Convert CSV to Delta format
+
+df_oct.write.format("delta") \
+    .mode("overwrite") \
+    .save("/Volumes/workspace/ecommerce/ecommerce_data/orders")
+
+spark.read.format("delta") \
+    .load("/Volumes/workspace/ecommerce/ecommerce_data/orders") \
+    .show(5)
+
+
+#Task 2: Create Delta tables (PySpark + SQL)
+#2A. Create Delta Table using PySpark
+spark.sql("""
+CREATE TABLE IF NOT EXISTS ecommerce.orders_delta
+USING DELTA
+AS SELECT * FROM delta.`/Volumes/workspace/ecommerce/ecommerce_data/orders`
+""")
+
+
+%sql
+SELECT COUNT(*) FROM ecommerce.orders_delta;
+
+
+%sql
+CREATE TABLE ecommerce.orders_delta_sql
+USING DELTA
+AS
+SELECT *
+FROM csv.`/Volumes/workspace/ecommerce/ecommerce_data/2019-Oct.csv`;
+
+
+%sql
+SELECT COUNT(*) FROM ecommerce.orders_delta_sql
+
+
+
+
+#Task 3: Test Schema Enforcement
+%sql
+DESCRIBE TABLE ecommerce.orders_delta;
+
+
+
+%sql
+INSERT INTO ecommerce.orders_delta
+VALUES ('ABC', 'XYZ', 'INVALID', 'not-a-date', 'user1','challenges','barkath','1212312','212131321');
+
+
+
+#Task 4: Handle Duplicate Inserts
+
+from pyspark.sql import functions as F
+
+# Read the Delta table
+orders_df = spark.read.format("delta").load("/Volumes/workspace/ecommerce/ecommerce_data/orders")
+
+# Remove duplicates based on all columns
+deduped_orders_df = orders_df.dropDuplicates()
+
+# Overwrite Delta table with deduplicated data
+deduped_orders_df.write.format("delta").mode("overwrite").save("/Volumes/workspace/ecommerce/ecommerce_data/orders")
+
+# Verify deduplication
+display(spark.read.format("delta").load("/Volumes/workspace/ecommerce/ecommerce_data/orders").limit(10))
+
+
+
