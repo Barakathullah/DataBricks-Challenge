@@ -1,0 +1,34 @@
+dbutils.widgets.text("run_date", "2026-01-15", "Run Date")
+run_date = dbutils.widgets.get("run_date")
+print(f"Notebook run date: {run_date}")
+
+
+
+dbutils.widgets.dropdown("tier", "bronze", ["bronze", "silver", "gold"], "Data Tier")
+tier = dbutils.widgets.get("tier")
+print(f"Selected tier: {tier}")
+
+
+
+# Add widgets for parameters
+dbutils.widgets.text("source_path", "/default/path")
+dbutils.widgets.dropdown("layer", "bronze", ["bronze","silver","gold"])
+
+# Use parameters
+source = dbutils.widgets.get("source_path")
+layer = dbutils.widgets.get("layer")
+
+def run_layer(layer_name):
+    if layer_name == "bronze":
+        # Bronze logic
+        pass
+    elif layer_name == "silver":
+        # Silver logic
+        pass
+    # ...
+
+# UI: Create Job
+# Task 1: bronze_layer (notebook)
+# Task 2: silver_layer (depends on Task 1)
+# Task 3: gold_layer (depends on Task 2)
+# Schedule: Daily 2 AM
