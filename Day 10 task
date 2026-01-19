@@ -1,0 +1,19 @@
+gold = spark.read.format("delta").load("/Volumes/workspace/ecommerce/ecommerce_data/gold_product_kpis")
+gold.write.format("delta") \
+    .mode("overwrite") \
+    .partitionBy("product_id") \
+    .save("/Volumes/workspace/ecommerce/ecommerce_data/gold_product_kpis_partitioned")
+
+
+
+%python
+spark.sql("""
+OPTIMIZE delta.`/Volumes/workspace/ecommerce/ecommerce_data/gold_product_kpis_partitioned` ZORDER BY (total_sales)
+""")
+
+
+import time
+start = time.time()
+result = spark.read.format("delta").load("/Volumes/workspace/ecommerce/ecommerce_data/gold_product_kpis_partitioned") \
+    .filter("total_sales > 1000").count()
+print("Query time:", time.time() - start)
