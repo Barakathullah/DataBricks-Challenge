@@ -1,0 +1,56 @@
+%sql
+WITH daily_revenue AS (
+    SELECT
+        DATE(event_time) AS event_date,
+        SUM(price) AS daily_rev
+    FROM ecommerce.silver.events
+    WHERE event_type = 'purchase'
+    GROUP BY DATE(event_time)
+)
+SELECT
+    event_date,
+    daily_rev,
+    ROUND(
+        AVG(daily_rev) OVER (
+            ORDER BY event_date
+            ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+        ),
+        2
+    ) AS moving_avg_7d
+FROM daily_revenue
+ORDER BY event_date;
+
+
+
+
+%sql
+WITH user_metrics AS (
+    SELECT
+        user_id,
+        COUNT(*) AS purchase_count,
+        SUM(price) AS total_spent
+    FROM ecommerce.silver.events
+    WHERE event_type = 'purchase'
+    GROUP BY user_id
+)
+SELECT
+    CASE
+        WHEN total_spent >= 5000 THEN 'Platinum (VIP)'
+        WHEN total_spent >= 1000 THEN 'Gold (Loyal)'
+        ELSE 'Silver (Regular)'
+    END AS customer_tier,
+    --COUNT(user_id) AS total_customers,
+    ROUND(AVG(total_spent), 2) AS avg_lifetime_value
+FROM user_metrics
+GROUP BY customer_tier
+ORDER BY avg_lifetime_value DESC;
+
+
+
+# Python DataFrame
+df = spark.read.format("delta").load("/Volumes/workspace/ecommerce/ecommerce_data/gold_product_kpis")
+df.filter(df.total_sales > 1000).explain(True)
+
+
+%sql
+EXPLAIN SELECT * FROM gold.products WHERE total_sales > 1000;
