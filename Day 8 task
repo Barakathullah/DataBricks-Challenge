@@ -1,0 +1,59 @@
+%sql
+CREATE CATALOG IF NOT EXISTS ecommerce;
+USE CATALOG ecommerce;
+
+CREATE SCHEMA IF NOT EXISTS bronze;
+CREATE SCHEMA IF NOT EXISTS silver;
+CREATE SCHEMA IF NOT EXISTS gold;
+
+
+
+
+
+%sql
+CREATE TABLE bronze.events
+USING DELTA
+AS SELECT * FROM delta.`/Volumes/workspace/ecommerce/ecommerce_data/bronze_events`;
+
+CREATE TABLE silver.events
+USING DELTA
+AS SELECT * FROM delta.`/Volumes/workspace/ecommerce/ecommerce_data/silver_events`;
+
+CREATE TABLE gold.products
+USING DELTA
+AS SELECT * FROM delta.`/Volumes/workspace/ecommerce/ecommerce_data/gold_product_kpis`;
+
+
+%sql
+GRANT SELECT ON TABLE gold.products TO `barXXXXXXlah.r@gmail.com`;
+GRANT ALL PRIVILEGES ON SCHEMA silver TO `barXXXXXlah.r@gmail.com`;
+
+
+%sql
+CREATE VIEW gold.top_products AS
+SELECT product_id, total_sales, avg_price, order_count
+FROM gold.products
+WHERE order_count > 10
+ORDER BY total_sales DESC
+LIMIT 100;
+
+
+%sql
+-- Grant SELECT on gold.products to analyst user
+GRANT SELECT ON TABLE gold.products TO `barakathullah.r@gmail.com`;
+
+-- Grant ALL PRIVILEGES on silver schema to engineer user
+GRANT ALL PRIVILEGES ON SCHEMA silver TO `barakathullah.r@gmail.com`;
+
+
+%sql
+CREATE OR REPLACE VIEW gold.top_products AS
+SELECT product_id, total_sales, avg_price, order_count
+FROM gold.products
+WHERE order_count > 10
+ORDER BY total_sales DESC
+LIMIT 100;
+
+
+%sql
+show grants on table gold.products
